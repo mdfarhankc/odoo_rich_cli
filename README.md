@@ -154,6 +154,10 @@ odoo_rich_cli/
 │   └── menu.py                 # Rich interactive menu with banner and config status
 ```
 
+## Contributing
+
+Contributions are welcome! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on setting up the dev environment, submitting PRs, and reporting bugs.
+
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE) for details.
