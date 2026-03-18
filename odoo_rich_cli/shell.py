@@ -2,7 +2,7 @@ import json
 import shutil
 import subprocess
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 SENTINEL = "__ODOO_CLI_RESULT__:"
@@ -20,7 +20,6 @@ def _find_odoo_command():
     for cmd in ["odoo", "odoo-bin"]:
         found = shutil.which(cmd)
         if found:
-            # Run through the current interpreter to guarantee the right venv
             return [python, found]
 
     # Check for odoo-bin in the current working directory (common source setup)
@@ -38,6 +37,7 @@ class ShellResult:
     stdout: str
     stderr: str
     return_code: int
+    data: object = field(default=None)
 
 
 def _wrap_script(script: str) -> str:
@@ -47,7 +47,10 @@ import json as _json
 
 try:
 {_indent(script, 4)}
-    _result = {{"ok": True, "message": "Operation completed successfully."}}
+    try:
+        _result
+    except NameError:
+        _result = {{"ok": True, "message": "Operation completed successfully."}}
 except Exception as _e:
     _result = {{"ok": False, "message": str(_e)}}
 
@@ -122,13 +125,14 @@ def execute(
         if line.startswith(SENTINEL):
             payload = line[len(SENTINEL):]
             try:
-                data = json.loads(payload)
+                parsed = json.loads(payload)
                 return ShellResult(
-                    success=data.get("ok", False),
-                    message=data.get("message", ""),
+                    success=parsed.get("ok", False),
+                    message=parsed.get("message", ""),
                     stdout=proc.stdout,
                     stderr=proc.stderr,
                     return_code=proc.returncode,
+                    data=parsed.get("data"),
                 )
             except json.JSONDecodeError:
                 break
