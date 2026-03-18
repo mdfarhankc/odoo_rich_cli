@@ -15,16 +15,8 @@ Compatible with **Odoo 14+** and **Python 3.7+**.
 
 ## Installation
 
-### From source (with pip)
-
 ```bash
-pip install .
-```
-
-### From source (with uv)
-
-```bash
-uv pip install .
+pip install odoo-rich-cli
 ```
 
 ## Usage
