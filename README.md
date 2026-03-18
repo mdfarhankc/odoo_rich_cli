@@ -1,15 +1,17 @@
 # Odoo Rich CLI
 
-A beautiful CLI tool for common Odoo module operations — install, upgrade, and uninstall — without manually typing ORM code in `odoo shell`.
+A beautiful CLI tool for managing Odoo modules — install, upgrade, and uninstall — with a Rich UI and Typer, without manually typing ORM code in `odoo shell`.
 
 Compatible with **Odoo 14+** and **Python 3.7+**.
 
 ## Features
 
 - **Direct commands** — run `odoo-cli install -m sale` straight from your terminal
-- **Interactive menu** — run `odoo-cli` with no arguments for a guided Rich UI
+- **Interactive menu** — run `odoo-cli` with no arguments for a guided Rich UI with ASCII banner, config status, and colored output
+- **Global flags** — pass `-c` and `-d` at the top level, works for both direct commands and interactive mode
+- **Auto-detects Odoo** — finds `odoo`, `odoo-bin` on PATH, or `./odoo-bin` in the current directory
+- **Uses your active virtualenv** — runs `odoo-bin` with the currently active Python interpreter, so all your Odoo dependencies are available
 - **Reads odoo.conf** — auto-detects database and config from your project directory
-- **Rich output** — spinners, colored success/error messages, clean formatting
 
 ## Installation
 
@@ -27,7 +29,7 @@ uv pip install .
 
 ## Usage
 
-Run commands from a directory that contains an `odoo.conf` file (or pass `--config` explicitly).
+Run commands from your Odoo project directory (where `odoo.conf` or `odoo-bin` lives), with your Odoo virtualenv activated.
 
 ### Direct commands
 
@@ -42,12 +44,16 @@ odoo-cli upgrade -m sale
 odoo-cli uninstall -m sale
 ```
 
-### Override database or config path
+### Global flags
+
+The `-c` (config) and `-d` (database) flags work at the top level and on every subcommand:
 
 ```bash
-odoo-cli install -m sale -d my_database
-odoo-cli upgrade -m sale -c /path/to/odoo.conf
-odoo-cli uninstall -m sale -c /path/to/odoo.conf -d my_database
+# Launch interactive menu with a specific config
+odoo-cli -c ./local-odoo.conf
+
+# Direct command with config and database override
+odoo-cli install -m sale -c /path/to/odoo.conf -d my_database
 ```
 
 ### Interactive menu
@@ -56,29 +62,43 @@ odoo-cli uninstall -m sale -c /path/to/odoo.conf -d my_database
 odoo-cli
 ```
 
-This launches a numbered menu where you can pick an operation, enter the module name, and optionally override the config path and database.
+This launches a Rich interactive menu with:
+- ASCII art banner and version info
+- Config/database status panel (auto-detected from `odoo.conf`)
+- Numbered operations to choose from
+- Spinner and colored result output
+
+If config was auto-detected, you won't be prompted for it again. If not, the menu will ask you for the config path and database.
 
 ## How it works
 
-The CLI builds Python ORM scripts and pipes them into `odoo shell -c <conf> -d <db> --no-http` via subprocess. Each script locates the module, calls the appropriate `button_immediate_*` method, and runs `env.cr.commit()` so changes persist after the shell exits.
+1. The CLI finds the Odoo command (`odoo`, `odoo-bin`, or `./odoo-bin`) and runs it using your currently active Python interpreter (`sys.executable`)
+2. It builds Python ORM scripts and pipes them into `odoo shell -c <conf> -d <db> --no-http` via subprocess
+3. Each script locates the module, calls the appropriate `button_immediate_*` method, and runs `env.cr.commit()` so changes persist after the shell exits
+4. Output is parsed via a sentinel marker for reliable result extraction from odoo shell's startup noise
 
 ## Testing locally
 
 ### Prerequisites
 
 - An Odoo instance with a PostgreSQL database already set up
-- The `odoo` command available on your PATH (e.g. via an Odoo source checkout or pip install)
+- `odoo` or `odoo-bin` available (on PATH or in the current directory)
 - An `odoo.conf` file
+- Your Odoo virtualenv activated (so all dependencies like `PyPDF2`, etc. are available)
 
 ### 1. Install in editable mode
 
-```bash
-# Using uv (recommended)
-uv pip install -e .
+Install `odoo-cli` into your Odoo virtualenv so everything shares the same environment:
 
-# Or using pip
+```bash
+# Using pip
 pip install -e .
+
+# Or using uv
+uv pip install -e .
 ```
+
+With editable mode (`-e`), code changes are picked up immediately — no need to reinstall after every edit.
 
 ### 2. Create a minimal odoo.conf (if you don't have one)
 
@@ -95,8 +115,11 @@ addons_path = /path/to/odoo/addons
 odoo-cli --help
 odoo-cli install --help
 
-# Test the interactive menu (does not require a running Odoo)
+# Launch the interactive menu
 odoo-cli
+
+# Launch with a specific config file
+odoo-cli -c ./local-odoo.conf
 
 # Test actual module operations against your database
 odoo-cli install -m sale
@@ -133,10 +156,10 @@ odoo_rich_cli/
 ├── odoo_rich_cli/
 │   ├── __init__.py             # Package version
 │   ├── config.py               # Finds and parses odoo.conf
-│   ├── shell.py                # Pipes scripts into odoo shell subprocess
+│   ├── shell.py                # Auto-detects odoo command, pipes scripts into odoo shell
 │   ├── commands.py             # Builds ORM scripts for install/upgrade/uninstall
-│   ├── app.py                  # Typer CLI app with subcommands
-│   └── menu.py                 # Rich interactive menu
+│   ├── app.py                  # Typer CLI app with global flags and subcommands
+│   └── menu.py                 # Rich interactive menu with banner and config status
 ```
 
 ## License
